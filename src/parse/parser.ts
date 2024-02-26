@@ -33,7 +33,7 @@ import {
   SpecialToken,
 } from "../lexer";
 import { builtInNames } from "../runtime/builtins";
-import { Either, ok, err } from "../util/either";
+import { Either, ok, err, Err } from "../util/either";
 
 type CodeBlockItem<T = CodeBlockStructure> =
   | {
@@ -234,6 +234,20 @@ export class Parser {
     this.current = index;
   }
 
+  private composeError(
+    message: string,
+    token: Token,
+    type: string = "SyntaxError"
+  ): Err<QuaesitumError> {
+    return err({
+      column: token.column,
+      lineno: token.lineno,
+      file: token.file ?? "<unknown>",
+      message,
+      type,
+    });
+  }
+
   private scanCodeBlock(
     from: number = 0,
     depth: number = 0,
@@ -283,7 +297,7 @@ export class Parser {
     return structure;
   }
 
-  private scanNames(): CodeBlock {
+  private scanNames(): Either<CodeBlock, QuaesitumError> {
     const blocks = this.scanCodeBlock(0, 0, !1);
     const root: CodeBlock = {
       children: [],
@@ -331,6 +345,8 @@ export class Parser {
     let currentIndexInBlock = [0];
     let currentCodeBlock = [root];
 
+    let inComment = false;
+
     while (currentIndexInBlock.length > 0) {
       if (currentIndexInBlock[0] >= currentBlock[0].children.length) {
         currentIndexInBlock.shift();
@@ -344,6 +360,16 @@ export class Parser {
 
       const current = currentBlock[0].children[currentIndexInBlock[0]];
       currentIndexInBlock[0]++;
+
+      if (inComment) {
+        if (
+          current.type === "token" &&
+          current.value.type === TokenType.END_OF_SENTENCE
+        ) {
+          inComment = false;
+        }
+        continue;
+      }
 
       if (current.type === "codeblock") {
         currentIndexInBlock.unshift(0);
@@ -360,14 +386,18 @@ export class Parser {
         let token = current.value;
 
         switch (token.type) {
+          case TokenType.NOTE:
+            inComment = true;
+            break;
           case TokenType.CREATE: {
             let next = currentBlock[0].children[currentIndexInBlock[0]];
             if (
               next?.type !== "token" ||
               next.value.type !== TokenType.VARIABLE
             ) {
-              throw new Error(
-                `SyntaxError: Expected 'variabilis' after '${token.value}' at line ${token.lineno} column ${token.column}`
+              return this.composeError(
+                `Expected 'variabilis' after '${token.value}'`,
+                token
               );
             }
             currentIndexInBlock[0]++;
@@ -377,8 +407,9 @@ export class Parser {
               next?.type !== "token" ||
               next.value.type !== TokenType.IDENTIFIER
             ) {
-              throw new Error(
-                `SyntaxError: Expected an identifier after 'variabilis' at line ${token.lineno} column ${token.column}`
+              return this.composeError(
+                `Expected an identifier after 'variabilis'`,
+                token
               );
             }
             currentIndexInBlock[0]++;
@@ -389,9 +420,7 @@ export class Parser {
               next?.type !== "token" ||
               next.value.type !== TokenType.END_OF_SENTENCE
             ) {
-              throw new Error(
-                `SyntaxError: Expected '.' at line ${token.lineno} column ${token.column}`
-              );
+              return this.composeError("Expected '.'", token);
             }
             currentIndexInBlock[0]++;
             break;
@@ -403,8 +432,9 @@ export class Parser {
               next?.type !== "token" ||
               next?.value.type !== TokenType.IDENTIFIER
             ) {
-              throw new Error(
-                `SyntaxError: Expected an identifier after 'define' at line ${token.lineno} column ${token.column}`
+              return this.composeError(
+                "Expected an identifier after 'define'",
+                token
               );
             }
             const name = next.value.value;
@@ -413,8 +443,9 @@ export class Parser {
             next = currentBlock[0].children[currentIndexInBlock[0]];
 
             if (next?.type !== "token" || next?.value.type !== TokenType.WITH) {
-              throw new Error(
-                `SyntaxError: Expected 'cum' after identifier at line ${token.lineno} column ${token.column}`
+              return this.composeError(
+                "Expected 'cum' after identifier",
+                token
               );
             }
 
@@ -425,8 +456,9 @@ export class Parser {
               next?.type !== "token" ||
               next?.value.type !== TokenType.IDENTIFIER
             ) {
-              throw new Error(
-                `SyntaxError: Expected identifier after 'cum' at line ${token.lineno} column ${token.column}`
+              return this.composeError(
+                "Expected identifier after 'cum'",
+                token
               );
             }
 
@@ -454,9 +486,7 @@ export class Parser {
             }
 
             if (next.value.type !== TokenType.AND) {
-              throw new Error(
-                `SyntaxError: Expected 'face' or 'et' at line ${token.lineno} column ${token.column}`
-              );
+              return this.composeError("Expected 'face' or 'et'", token);
             }
 
             currentIndexInBlock[0]++;
@@ -466,9 +496,7 @@ export class Parser {
               next?.type !== "token" ||
               next?.value.type !== TokenType.IDENTIFIER
             ) {
-              throw new Error(
-                `SyntaxError: Expected identifier after 'et' at line ${token.lineno} column ${token.column}`
-              );
+              return this.composeError("Expected identifier after 'et'", token);
             }
 
             const arg2 = next.value;
@@ -477,8 +505,9 @@ export class Parser {
             next = currentBlock[0].children[currentIndexInBlock[0]];
 
             if (next?.type !== "codeblock") {
-              throw new Error(
-                `SyntaxError: Expected tum after identifier at line ${token.lineno} column ${token.column}`
+              return this.composeError(
+                "Expected 'tum' after identifier",
+                token
               );
             }
 
@@ -505,15 +534,34 @@ export class Parser {
       }
     }
 
-    return root;
+    return ok(root);
   }
 
-  private analyzeIdentifiers() {
-    const names = this.scanNames();
+  private analyzeIdentifiers(): Either<null, QuaesitumError> {
+    const optNames = this.scanNames();
+
+    if (optNames.isErr()) {
+      return optNames;
+    }
+
+    const names = optNames.value;
+    let inComment = false;
 
     tokens: for (let i = 0; i < this.tokens.length; i++) {
       const token = this.tokens[i];
       const blocks = match(names, i).reverse();
+
+      if (inComment) {
+        if (token.type === TokenType.END_OF_SENTENCE) {
+          inComment = false;
+        }
+        continue;
+      }
+
+      if (token.type === TokenType.NOTE) {
+        inComment = true;
+        continue;
+      }
 
       if (token.type !== TokenType.IDENTIFIER) {
         continue;
@@ -563,10 +611,16 @@ export class Parser {
         continue;
       }
 
-      throw new Error(
-        `undefined identifier ${token.value} was found at line ${token.lineno} column ${token.column}.`
-      );
+      return err({
+        column: token.column,
+        lineno: token.lineno,
+        file: token.file,
+        message: `undefined identifier '${token.value}'`,
+        type: "NameError",
+      });
     }
+
+    return ok(null);
   }
 
   private program(): Either<ProgramNode, QuaesitumError> {
@@ -1495,10 +1549,14 @@ export class Parser {
     }
   }
 
-  feed(tokens: Token[]) {
+  feed(tokens: Token[]): Either<ProgramNode, QuaesitumError> {
     this.initialize();
     this.tokens = tokens;
-    this.analyzeIdentifiers();
+    const err = this.analyzeIdentifiers();
+
+    if (err.isErr()) {
+      return err;
+    }
 
     return this.verifyAST(this.program());
   }

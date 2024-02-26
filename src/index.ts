@@ -19,13 +19,14 @@ const lexer = new Lexer();
 // huc finis est.
 
 // scribe fibonacci 0.`;
-const input = `crea variabilis numerus.
+const input = `nota @test this is a comment crea variabilis.
+crea variabilis numerus.
 per numerus ab 1 ad 100 face
-  si numerus modulo 15 aequat 0 tum
+  si 0 aequat numerus modulo 15 tum
     scribe "FizzBuzz".
-  huc finis est. aliter si numerus modulo 3 aequat 0 tum
+  huc finis est. aliter si 0 aequat numerus modulo 3 tum
     scribe "Fizz".
-  huc finis est. aliter si numerus modulo 5 aequat 0 tum
+  huc finis est. aliter si 0 aequat numerus modulo 5 tum
     scribe "Buzz".
   huc finis est. aliter tum
     scribe numerus.
