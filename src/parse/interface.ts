@@ -1,4 +1,4 @@
-import { ASTNode } from "../ast/astNode";
+import { ASTNode } from "../ast";
 import { TokenType } from "../lexer";
 
 export interface IParser {

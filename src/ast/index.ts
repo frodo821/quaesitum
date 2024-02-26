@@ -1,5 +1,4 @@
-export { ASTNode, ASTNodeType, Token, TokenType } from "./astNode";
-export {
+import {
   ExpressionNode,
   ExpressionType,
   BinaryOpNode,
@@ -8,7 +7,7 @@ export {
   StringLiteralNode,
   VariableNode,
 } from "./expressions";
-export {
+import {
   SentenceType,
   IdentifierNode,
   SentenceListNode,
@@ -20,4 +19,45 @@ export {
   ForNode,
   WhileNode,
 } from "./sentence";
-export { ProgramNode } from "./program";
+import { ProgramNode } from "./program";
+
+export { ASTNodeBase, ASTNodeType, Token, TokenType } from "./astNode";
+
+export {
+  ProgramNode,
+  ExpressionNode,
+  ExpressionType,
+  BinaryOpNode,
+  UnaryOpNode,
+  NumericLiteralNode,
+  StringLiteralNode,
+  VariableNode,
+  SentenceType,
+  IdentifierNode,
+  SentenceListNode,
+  SentenceNode,
+  VariableDeclarationNode,
+  AssignmentNode,
+  IfNode,
+  ElseNode,
+  ForNode,
+  WhileNode,
+};
+
+export type ASTNode =
+  | ExpressionNode
+  | BinaryOpNode
+  | UnaryOpNode
+  | NumericLiteralNode
+  | StringLiteralNode
+  | VariableNode
+  | IdentifierNode
+  | SentenceListNode
+  | SentenceNode
+  | VariableDeclarationNode
+  | AssignmentNode
+  | IfNode
+  | ElseNode
+  | ForNode
+  | WhileNode
+  | ProgramNode;

@@ -4,7 +4,7 @@ import {
   UnaryOpToken,
   VariableToken,
 } from "../lexer";
-import { ASTNode, ASTNodeType } from "./astNode";
+import { ASTNodeBase, ASTNodeType } from "./astNode";
 import { ExpressionNode } from "./expressions";
 
 export type SentenceType =
@@ -19,44 +19,44 @@ export type SentenceType =
   | ASTNodeType.RETURN
   | ASTNodeType.COMMENT;
 
-export interface IdentifierNode extends ASTNode {
+export interface IdentifierNode extends ASTNodeBase {
   type: ASTNodeType.IDENTIFIER;
   identifier: SpecialToken;
 }
 
-export interface SentenceListNode extends ASTNode {
+export interface SentenceListNode extends ASTNodeBase {
   type: ASTNodeType.SENTENCE_LIST;
   sentences: SentenceNode[];
 }
 
-export interface VariableDeclarationNode {
+export interface VariableDeclarationNode extends ASTNodeBase {
   type: ASTNodeType.VARIABLE_DECLARATION;
   identifier: IdentifierNode;
 }
 
-export interface ImperativeNode {
+export interface ImperativeNode extends ASTNodeBase {
   type: ASTNodeType.IMPERATIVE;
   value: ExpressionNode;
 }
 
-export interface AssignmentNode {
+export interface AssignmentNode extends ASTNodeBase {
   type: ASTNodeType.ASSIGNMENT;
   identifier: IdentifierNode;
   value: ExpressionNode;
 }
 
-export interface IfNode {
+export interface IfNode extends ASTNodeBase {
   type: ASTNodeType.IF;
   condition: ExpressionNode;
   body: SentenceListNode;
 }
 
-export interface ElseNode {
+export interface ElseNode extends ASTNodeBase {
   type: ASTNodeType.ELSE;
   body: SentenceListNode | IfNode;
 }
 
-export interface ForNode {
+export interface ForNode extends ASTNodeBase {
   type: ASTNodeType.FOR;
   variable: IdentifierNode;
   from: ExpressionNode;
@@ -64,13 +64,13 @@ export interface ForNode {
   body: SentenceListNode;
 }
 
-export interface WhileNode {
+export interface WhileNode extends ASTNodeBase {
   type: ASTNodeType.WHILE;
   condition: ExpressionNode;
   body: SentenceListNode;
 }
 
-export interface FunctionNode {
+export interface FunctionNode extends ASTNodeBase {
   type: ASTNodeType.FUNCTION;
   identifier: IdentifierNode;
   param1: IdentifierNode;
@@ -78,12 +78,12 @@ export interface FunctionNode {
   body: SentenceListNode;
 }
 
-export interface ReturnNode {
+export interface ReturnNode extends ASTNodeBase {
   type: ASTNodeType.RETURN;
   value: ExpressionNode;
 }
 
-export interface CommentNode {
+export interface CommentNode extends ASTNodeBase {
   type: ASTNodeType.COMMENT;
   value: string;
 }

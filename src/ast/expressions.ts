@@ -1,5 +1,5 @@
 import { BinaryOpToken, Token, UnaryOpToken, VariableToken } from "../lexer";
-import { ASTNode, ASTNodeType } from "./astNode";
+import { ASTNodeBase, ASTNodeType } from "./astNode";
 
 export type ExpressionType =
   | ASTNodeType.BINARY_OP
@@ -8,7 +8,7 @@ export type ExpressionType =
   | ASTNodeType.STRING_LITERAL
   | ASTNodeType.VARIABLE;
 
-export interface ExpressionNode extends ASTNode {
+export interface ExpressionNode extends ASTNodeBase {
   type: ExpressionType;
 }
 

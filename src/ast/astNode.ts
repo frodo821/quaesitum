@@ -26,7 +26,7 @@ export enum ASTNodeType {
   VARIABLE = "VARIABLE",
 }
 
-export interface ASTNode {
+export interface ASTNodeBase {
   type: ASTNodeType;
   column: number;
   lineno: number;

@@ -16,6 +16,7 @@ import {
   StringLiteralNode,
   VariableNode,
   ProgramNode,
+  ASTNode,
 } from "../ast";
 import {
   CommentNode,
@@ -31,6 +32,7 @@ import {
   BinaryOpToken,
   SpecialToken,
 } from "../lexer";
+import { builtInNames } from "../runtime/builtins";
 import { Either, ok, err } from "../util/either";
 
 type CodeBlockItem<T = CodeBlockStructure> =
@@ -88,23 +90,6 @@ export interface QuaesitumError {
 export interface QuaesitumSyntaxError extends QuaesitumError {
   type: "SyntaxError";
 }
-
-export const builtInNames = {
-  unaryOp: ["minus", "non", "plus", "scribe"],
-  binaryOp: [
-    "adde",
-    "subtrahe",
-    "multiplicet",
-    "divide",
-    "modulo",
-    "aequat",
-    "ultra",
-    "infra",
-    "vel",
-    "neque",
-  ],
-  vars: ["verum", "falsum", "null"],
-} as const;
 
 export class Parser {
   private tokens: Token[] = [];
@@ -1398,11 +1383,123 @@ export class Parser {
     });
   }
 
+  private verifyAST<T extends ASTNode>(
+    ast: Either<T, QuaesitumError>,
+    parent: ASTNode | null = null,
+    nth: number = 0
+  ): Either<T, QuaesitumError> {
+    if (ast.isErr()) {
+      return ast;
+    }
+
+    const val = ast.value;
+
+    switch (val.type) {
+      case ASTNodeType.PROGRAM: {
+        const p = this.verifyAST(ok(val.program), val, 0);
+
+        if (p.isErr()) {
+          return p;
+        }
+
+        return ast;
+      }
+      case ASTNodeType.SENTENCE_LIST: {
+        for (let i = 0; i < val.sentences.length; i++) {
+          const sentence = val.sentences[i];
+          const s = this.verifyAST(ok(sentence), val, i);
+
+          if (s.isErr()) {
+            return s;
+          }
+        }
+
+        return ast;
+      }
+      case ASTNodeType.IF: {
+        const c = this.verifyAST(ok(val.condition), val, 0);
+
+        if (c.isErr()) {
+          return c;
+        }
+
+        const b = this.verifyAST(ok(val.body), val, 1);
+
+        if (b.isErr()) {
+          return b;
+        }
+
+        return ast;
+      }
+      case ASTNodeType.ELSE: {
+        if (parent?.type !== ASTNodeType.SENTENCE_LIST) {
+          return err({
+            column: val.column,
+            lineno: val.lineno,
+            file: val.file,
+            message:
+              "Illegal 'aliter' placement (parent is not a sentence list)",
+            type: "InternalError",
+          });
+        }
+
+        const prevNode = parent.sentences[nth - 1];
+        const prev = prevNode?.type;
+
+        if (prev !== ASTNodeType.IF) {
+          if (prev !== ASTNodeType.ELSE) {
+            return err({
+              column: val.column,
+              lineno: val.lineno,
+              file: val.file,
+              message:
+                "'aliter' statement must be placed after 'si' or 'aliter' statement.",
+              type: "SyntaxError",
+            });
+          }
+
+          if (prevNode.body.type === ASTNodeType.SENTENCE_LIST) {
+            return err({
+              column: val.column,
+              lineno: val.lineno,
+              file: val.file,
+              message:
+                "cannot place 'aliter' statement after unconditioned 'aliter'",
+              type: "SyntaxError",
+            });
+          }
+        }
+
+        const b = this.verifyAST(ok(val.body), val, 0);
+
+        if (b.isErr()) {
+          return b;
+        }
+
+        return ast;
+      }
+      case ASTNodeType.FOR:
+      case ASTNodeType.WHILE:
+      case ASTNodeType.FUNCTION: {
+        const b = this.verifyAST(ok(val.body), val, 0);
+
+        if (b.isErr()) {
+          return b;
+        }
+
+        return ast;
+      }
+
+      default:
+        return ast;
+    }
+  }
+
   feed(tokens: Token[]) {
     this.initialize();
     this.tokens = tokens;
     this.analyzeIdentifiers();
 
-    return this.program();
+    return this.verifyAST(this.program());
   }
 }
