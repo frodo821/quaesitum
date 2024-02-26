@@ -1,0 +1,12 @@
+crea variabilis numerus.
+per numerus ab 1 ad 100 face
+  si numerus modulo 15 aequat 0 tum
+    scribe "FizzBuzz".
+  huc finis est. aliter si numerus modulo 3 aequat 0 tum
+    scribe "Fizz".
+  huc finis est. aliter si numerus modulo 5 aequat 0 tum
+    scribe "Buzz".
+  huc finis est. aliter tum
+    scribe numerus.
+  huc finis est.
+huc finis est.
