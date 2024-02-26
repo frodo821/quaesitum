@@ -6,9 +6,9 @@ define fibonacci cum num face
   crea variabilis a.
   crea variabilis b.
 
-  da a n subtrahe 1.
+  da a num subtrahe 1.
   da a fibonacci a.
-  da b n subtrahe 2.
+  da b num subtrahe 2.
   da b fibonacci b.
 
   redi a adde b.
