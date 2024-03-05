@@ -77,11 +77,11 @@ export class Lexer {
     [TokenType.END_OF_BLOCK, /^\bhuc finis est(?:\.|,)/],
     [TokenType.NUMERIC_LITERAL, /^\d+/],
     [TokenType.STRING_LITERAL, /^"[^"]*"/],
-    [TokenType.END_OF_SENTENCE, /^\.|,/],
+    [TokenType.END_OF_SENTENCE, /^(?:\.|,)/],
     [TokenType.NOTE, /^nota\b/],
     [TokenType.WITH, /^\bcum\b/],
     [TokenType.IDENTIFIER, /^\b[a-zA-Z_][a-zA-Z0-9_]*\b/],
-    [TokenType.UNKNOWN, /^\S+/], // Captures any unknown pattern
+    [TokenType.UNKNOWN, /^\S+?\b/], // Captures any unknown pattern
   ];
 
   private calcLineno(reading: number, str: string): [number, number] {
@@ -112,6 +112,7 @@ export class Lexer {
 
       for (let [type, pattern] of this.tokenPatterns) {
         if ((match = pattern.exec(input))) {
+          console.log(match);
           tokens.push({
             type,
             value: match[0],

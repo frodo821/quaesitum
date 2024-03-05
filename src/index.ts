@@ -7,14 +7,14 @@ const input = `nota @test this is a comment crea variabilis.
 crea variabilis numerus.
 per numerus ab 1 ad 100 face
   si 0 aequat numerus modulo 15 tum
-    scribe "FizzBuzz".
-  huc finis est. aliter si 0 aequat numerus modulo 3 tum
+    scribe "FizzBuzz",
+  huc finis est, aliter si 0 aequat numerus modulo 3 tum
     scribe "Fizz".
-  huc finis est. aliter si 0 aequat numerus modulo 5 tum
+  huc finis est, aliter si 0 aequat numerus modulo 5 tum
     scribe "Buzz".
-  huc finis est. aliter tum
+  huc finis est, aliter tum
     scribe numerus.
-  huc finis est.
+  huc finis est,
 huc finis est.
 `;
 const tokens = lexer.tokenize(input, "<test>");
