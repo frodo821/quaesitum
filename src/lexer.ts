@@ -60,7 +60,7 @@ export type SpecialToken = VariableToken | UnaryOpToken | BinaryOpToken;
 export class Lexer {
   private readonly tokenPatterns: [TokenType, RegExp][] = [
     [TokenType.CREATE, /^\bcrea\b/],
-    [TokenType.VARIABLE, /^\bvariabilis\b/],
+    [TokenType.VARIABLE, /^\bvariabile\b/],
     [TokenType.ASSIGN, /^\bda\b/],
     [TokenType.DEFINE, /^\bdefine\b/],
     [TokenType.RETURN, /^\bredi\b/],
@@ -82,7 +82,7 @@ export class Lexer {
     [TokenType.WITH, /^\bcum\b/],
     [TokenType.AND, /^\bet\b/],
     [TokenType.IDENTIFIER, /^\b[a-zA-Z_][a-zA-Z0-9_]*\b/],
-    [TokenType.UNKNOWN, /^\S+?\b/], // Captures any unknown pattern
+    [TokenType.UNKNOWN, /^\S+?(?:\b|(?=[\s,.]))/], // Captures any unknown pattern
   ];
 
   private calcLineno(reading: number, str: string): [number, number] {
@@ -128,7 +128,7 @@ export class Lexer {
 
       if (!tokenMatched) {
         throw new Error(
-          `Unknown token '${input}' at line ${lineno}, column ${column} in ${fileName}`
+          `Unknown character '${input[0]}' at line ${lineno}, column ${column} in ${fileName}`
         );
       }
     }

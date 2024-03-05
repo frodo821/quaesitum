@@ -1,17 +1,25 @@
+nota define fibonacci function takes an argument n.
 define fibonacci cum n face
+  nota if n is less than 2 return 1.
   si n infra 2 tum
     redi 1.
   huc finis est.
 
-  crea variabilis a.
-  crea variabilis b.
+  nota create intermediate variables a and b.
+  crea variabile a.
+  crea variabile b.
 
+  nota subtract 1 from n and call fibonacci with the result then store it into a.
   da a n subtrahe 1.
   da a fibonacci a.
+
+  nota subtract 2 from n and call fibonacci with the result then store it into b.
   da b n subtrahe 2.
   da b fibonacci b.
 
+  nota return the sum of a and b.
   redi a adde b.
 huc finis est.
 
+nota calulate 4th fibonacci number and print it.
 scribe fibonacci 4.

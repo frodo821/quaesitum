@@ -128,7 +128,7 @@ export function uneval(
 
   switch (node.type) {
     case ASTNodeType.VARIABLE_DECLARATION: {
-      return `crea variabilis ${node.identifier.identifier.value}.`;
+      return `crea variabile ${node.identifier.identifier.value}.`;
     }
     case ASTNodeType.ASSIGNMENT: {
       return `da ${node.identifier.identifier.value} ${expressionToString(
