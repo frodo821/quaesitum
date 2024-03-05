@@ -80,6 +80,7 @@ export class Lexer {
     [TokenType.END_OF_SENTENCE, /^(?:\.|,)/],
     [TokenType.NOTE, /^nota\b/],
     [TokenType.WITH, /^\bcum\b/],
+    [TokenType.AND, /^\bet\b/],
     [TokenType.IDENTIFIER, /^\b[a-zA-Z_][a-zA-Z0-9_]*\b/],
     [TokenType.UNKNOWN, /^\S+?\b/], // Captures any unknown pattern
   ];

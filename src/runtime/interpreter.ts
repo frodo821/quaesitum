@@ -1,4 +1,4 @@
-import { ASTNode, ASTNodeType, ProgramNode } from "../ast";
+import { ASTNode, ASTNodeType, ProgramNode, uneval } from "../ast";
 import {
   ExpressionNode,
   isBinaryOpNode,
@@ -245,21 +245,27 @@ function visit(
       const identifier = node.identifier.identifier.value;
 
       if (node.param2 === null) {
-        env.unaryOp[identifier] = (operand: any) => {
+        const op = (operand: any) => {
           const locals = createEnvironment(env);
           locals.vars[node.param1.identifier.value] = operand;
           return visit(node.body, locals, { isFunctionContext: true });
         };
+        op.toString = () => uneval(node, { splitLines: true });
+        op[Symbol.toStringTag] = op.toString;
+        env.unaryOp[identifier] = op;
 
         return ok(env.unaryOp[identifier]);
       }
 
-      env.binaryOp[identifier] = (left: any, right: any) => {
+      const op = (left: any, right: any) => {
         const locals = createEnvironment(env);
         locals.vars[node.param1.identifier.value] = left;
         locals.vars[node.param2!.identifier.value] = right;
         return visit(node.body, locals, { isFunctionContext: true });
       };
+      op.toString = () => uneval(node, { splitLines: true });
+      op[Symbol.toStringTag] = op.toString;
+      env.binaryOp[identifier] = op;
 
       return ok(env.binaryOp[identifier]);
     }
