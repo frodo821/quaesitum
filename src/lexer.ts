@@ -112,7 +112,6 @@ export class Lexer {
 
       for (let [type, pattern] of this.tokenPatterns) {
         if ((match = pattern.exec(input))) {
-          console.log(match);
           tokens.push({
             type,
             value: match[0],

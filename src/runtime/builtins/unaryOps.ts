@@ -13,6 +13,6 @@ export function plus(a: number): Ok<number> {
 }
 
 export function scribe(a: any): Ok<null> {
-  console.log(a);
+  console.log(`${a}`);
   return ok(null);
 }
