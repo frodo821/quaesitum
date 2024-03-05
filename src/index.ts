@@ -1,56 +1,37 @@
+import { QuaesitumError } from "./errors";
 import { Lexer } from "./lexer";
 import { Parser } from "./parse/parser";
 import { execute } from "./runtime/interpreter";
+import { readFileSync } from "fs";
 
-const lexer = new Lexer();
-const input = `define fibonacci cum n face
-  si n infra 2 tum
-    redi 1.
-  huc finis est.
-
-  crea variabilis a.
-  crea variabilis b.
-
-  da a n subtrahe 1.
-  da a fibonacci a.
-  da b n subtrahe 2.
-  da b fibonacci b.
-
-  redi a adde b.
-huc finis est.
-
-scribe fibonacci 4.
-crea variabilis a.
-da a fibonacci.
-scribe a.
-
-define foo cum n et m face
-  da n n adde m.
-  scribe n.
-huc finis est.
-
-1 foo 2.`;
-const tokens = lexer.tokenize(input, "<test>");
-const parser = new Parser();
-const result = parser.feed(tokens);
-
-if (result.isOk()) {
-  const e = execute(result.unwrap());
-
-  if (e.isErr()) {
-    const { column, file, lineno, message, type } = e.error;
-    console.error(
-      `${type}: ${message} at line ${lineno}, column ${column} in file ${file}.`
-    );
-  }
-
-  if (e.isOk()) {
-    console.log(e.unwrap()?.toString() ?? "null");
-  }
-} else {
-  const { column, file, lineno, message, type } = result.error;
-
+function showError(err: QuaesitumError) {
   console.error(
-    `${type}: ${message} at line ${lineno}, column ${column} in file ${file}.`
+    `${err.type}: ${err.message} at line ${err.lineno}, column ${
+      err.column
+    } in ${err.file ?? "<anonymous>"}`
   );
 }
+
+function execFile(path: string) {
+  const src = readFileSync(path, "utf-8");
+  const lexer = new Lexer();
+  const tokens = lexer.tokenize(src, path);
+  const parser = new Parser();
+  const program = parser.feed(tokens);
+
+  if (program.isErr()) {
+    showError(program.unwrapErr());
+    return -2;
+  }
+
+  const result = execute(program.unwrap());
+
+  if (result.isErr()) {
+    showError(result.unwrapErr());
+    return -1;
+  }
+
+  return 0;
+}
+
+process.exit(execFile(process.argv[2]));
