@@ -56,6 +56,15 @@ export interface ElseNode extends ASTNodeBase {
   body: SentenceListNode | IfNode;
 }
 
+export interface ComposedIfNode extends IfNode {
+  composed: true;
+  elif: ElseNode[];
+}
+
+export function isComposedIfNode(node: IfNode): node is ComposedIfNode {
+  return "composed" in node;
+}
+
 export interface ForNode extends ASTNodeBase {
   type: ASTNodeType.FOR;
   variable: IdentifierNode;

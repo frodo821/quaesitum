@@ -18,11 +18,14 @@ import {
   ProgramNode,
   ASTNode,
 } from "../ast";
+import { EmptyNode } from "../ast/astNode";
 import {
   CommentNode,
+  ComposedIfNode,
   FunctionNode,
   ImperativeNode,
   ReturnNode,
+  isComposedIfNode,
 } from "../ast/sentence";
 import {
   Token,
@@ -34,6 +37,7 @@ import {
 } from "../lexer";
 import { builtInNames } from "../runtime/builtins";
 import { Either, ok, err, Err } from "../util/either";
+import { QuaesitumError } from "../errors";
 
 type CodeBlockItem<T = CodeBlockStructure> =
   | {
@@ -77,14 +81,6 @@ function match(block: CodeBlock, pos: number): CodeBlock[] {
   }
 
   return ret;
-}
-
-export interface QuaesitumError {
-  type: string;
-  message: string;
-  lineno: number;
-  column: number;
-  file?: string;
 }
 
 export interface QuaesitumSyntaxError extends QuaesitumError {
@@ -716,6 +712,7 @@ export class Parser {
   }
 
   private sentence(): Either<SentenceNode, QuaesitumError> {
+    const current = this.peek();
     let sen: Either<SentenceNode, QuaesitumError> = this.variableDeclaration();
 
     if (sen.isOk()) {
@@ -777,10 +774,10 @@ export class Parser {
     }
 
     return err({
-      column: this.peek().column,
-      lineno: this.peek().lineno,
-      file: this.peek().file ?? "<unknown>",
-      message: `Unexpected token '${this.peek().value}' found`,
+      column: current.column,
+      lineno: current.lineno,
+      file: current.file ?? "<unknown>",
+      message: `Unexpected token '${current.value}' found`,
       type: "SyntaxError",
     });
   }
@@ -790,6 +787,7 @@ export class Parser {
     QuaesitumError
   > {
     this.enter();
+    const current = this.peek();
 
     let exp = this.expectTypeIs("Expected 'crea'", TokenType.CREATE);
     if (exp.isErr()) {
@@ -820,15 +818,16 @@ export class Parser {
     this.commit();
     return ok({
       type: ASTNodeType.VARIABLE_DECLARATION,
-      column: this.peek().column,
-      lineno: this.peek().lineno,
-      file: this.peek().file ?? "<unknown>",
+      column: current.column,
+      lineno: current.lineno,
+      file: current.file ?? "<unknown>",
       identifier: identifier.value,
     });
   }
 
   private assignment(): Either<AssignmentNode, QuaesitumError> {
     this.enter();
+    const current = this.peek();
 
     let exp = this.expectTypeIs("Expected 'da'", TokenType.ASSIGN);
 
@@ -862,9 +861,9 @@ export class Parser {
 
     return ok({
       type: ASTNodeType.ASSIGNMENT,
-      column: this.peek().column,
-      lineno: this.peek().lineno,
-      file: this.peek().file ?? "<unknown>",
+      column: current.column,
+      lineno: current.lineno,
+      file: current.file ?? "<unknown>",
       identifier: identifier.value,
       value: expression.value,
     });
@@ -899,6 +898,7 @@ export class Parser {
 
   private if_(): Either<IfNode, QuaesitumError> {
     this.enter();
+    const current = this.peek();
     let exp = this.expectTypeIs("Expected 'si'", TokenType.IF);
 
     if (exp.isErr()) {
@@ -931,9 +931,9 @@ export class Parser {
 
     return ok({
       type: ASTNodeType.IF,
-      column: this.peek().column,
-      lineno: this.peek().lineno,
-      file: this.peek().file ?? "<unknown>",
+      column: current.column,
+      lineno: current.lineno,
+      file: current.file ?? "<unknown>",
       condition: condition.value,
       body: body.value,
     });
@@ -941,6 +941,7 @@ export class Parser {
 
   private else_(): Either<ElseNode, QuaesitumError> {
     this.enter();
+    const current = this.peek();
     let exp = this.expectTypeIs("Expected 'aliter'", TokenType.ELSE);
 
     if (exp.isErr()) {
@@ -954,9 +955,9 @@ export class Parser {
       this.commit();
       return ok({
         type: ASTNodeType.ELSE,
-        column: this.peek().column,
-        lineno: this.peek().lineno,
-        file: this.peek().file ?? "<unknown>",
+        column: current.column,
+        lineno: current.lineno,
+        file: current.file ?? "<unknown>",
         body: if_.value,
       });
     }
@@ -979,15 +980,16 @@ export class Parser {
 
     return ok({
       type: ASTNodeType.ELSE,
-      column: this.peek().column,
-      lineno: this.peek().lineno,
-      file: this.peek().file ?? "<unknown>",
+      column: current.column,
+      lineno: current.lineno,
+      file: current.file ?? "<unknown>",
       body: body.value,
     });
   }
 
   private for_(): Either<ForNode, QuaesitumError> {
     this.enter();
+    const current = this.peek();
     let exp = this.expectTypeIs("Expected 'per'", TokenType.FOR);
 
     if (exp.isErr()) {
@@ -1037,9 +1039,9 @@ export class Parser {
       const ft = first.value;
 
       return err({
-        column: this.peek().column,
-        lineno: this.peek().lineno,
-        file: this.peek().file ?? "<unknown>",
+        column: current.column,
+        lineno: current.lineno,
+        file: current.file ?? "<unknown>",
         message: `Expected '${
           ft.type === TokenType.FROM ? "ad" : "ab"
         }' after '${ft.value}'`,
@@ -1084,6 +1086,7 @@ export class Parser {
 
   private while_(): Either<WhileNode, QuaesitumError> {
     this.enter();
+    const current = this.peek();
     let exp = this.expectTypeIs("Expected 'dum'", TokenType.WHILE);
 
     if (exp.isErr()) {
@@ -1116,9 +1119,9 @@ export class Parser {
 
     return ok({
       type: ASTNodeType.WHILE,
-      column: this.peek().column,
-      lineno: this.peek().lineno,
-      file: this.peek().file ?? "<unknown>",
+      column: current.column,
+      lineno: current.lineno,
+      file: current.file ?? "<unknown>",
       condition: condition.value,
       body: body.value,
     });
@@ -1126,6 +1129,7 @@ export class Parser {
 
   private function_(): Either<FunctionNode, QuaesitumError> {
     this.enter();
+    const current = this.peek();
     let exp = this.expectTypeIs("Expected 'define'", TokenType.DEFINE);
 
     if (exp.isErr()) {
@@ -1192,9 +1196,9 @@ export class Parser {
 
     return ok({
       type: ASTNodeType.FUNCTION,
-      column: this.peek().column,
-      lineno: this.peek().lineno,
-      file: this.peek().file ?? "<unknown>",
+      column: current.column,
+      lineno: current.lineno,
+      file: current.file ?? "<unknown>",
       identifier: identifier.value,
       param1: arg1.value,
       param2: arg2?.value ?? null,
@@ -1204,6 +1208,7 @@ export class Parser {
 
   private return_(): Either<ReturnNode, QuaesitumError> {
     this.enter();
+    const current = this.peek();
     let exp = this.expectTypeIs("", TokenType.RETURN);
 
     if (exp.isErr()) {
@@ -1227,20 +1232,24 @@ export class Parser {
 
     return ok({
       type: ASTNodeType.RETURN,
-      column: this.peek().column,
-      lineno: this.peek().lineno,
-      file: this.peek().file ?? "<unknown>",
+      column: current.column,
+      lineno: current.lineno,
+      file: current.file ?? "<unknown>",
       value: value.value,
     });
   }
 
   private comment(): Either<CommentNode, QuaesitumError> {
+    const current = this.peek();
+    this.enter();
     try {
       const note = this.peek();
       this.expectType("Expected 'nota'", TokenType.NOTE);
       const value = this.scanUntil("Unexpected EOF", TokenType.END_OF_SENTENCE)
         .map(({ value }) => value)
         .join(" ");
+
+      this.commit();
 
       return ok({
         type: ASTNodeType.COMMENT,
@@ -1250,10 +1259,12 @@ export class Parser {
         value,
       });
     } catch {
+      this.rollback();
+
       return err({
-        column: this.peek().column,
-        lineno: this.peek().lineno,
-        file: this.peek().file ?? "<unknown>",
+        column: current.column,
+        lineno: current.lineno,
+        file: current.file ?? "<unknown>",
         message: "Expected 'nota'",
         type: "SyntaxError",
       });
@@ -1271,6 +1282,7 @@ export class Parser {
   }
 
   private leftExpression(): Either<ExpressionNode, QuaesitumError> {
+    const current = this.peek();
     let exp: Either<ExpressionNode, QuaesitumError> = this.unaryOp();
 
     if (exp.isOk()) {
@@ -1296,9 +1308,9 @@ export class Parser {
     }
 
     return err({
-      column: this.peek().column,
-      lineno: this.peek().lineno,
-      file: this.peek().file ?? "<unknown>",
+      column: current.column,
+      lineno: current.lineno,
+      file: current.file ?? "<unknown>",
       message: `Unexpected token '${this.peek().value}' found`,
       type: "SyntaxError",
     });
@@ -1306,6 +1318,7 @@ export class Parser {
 
   private binaryOp(): Either<BinaryOpNode, QuaesitumError> {
     this.enter();
+    const current = this.peek();
     const left = this.leftExpression();
 
     if (left.isErr()) {
@@ -1334,9 +1347,9 @@ export class Parser {
 
     return ok({
       type: ASTNodeType.BINARY_OP,
-      column: this.peek().column,
-      lineno: this.peek().lineno,
-      file: this.peek().file ?? "<unknown>",
+      column: current.column,
+      lineno: current.lineno,
+      file: current.file ?? "<unknown>",
       left: left.value,
       operator: op.value,
       right: right.value,
@@ -1345,6 +1358,7 @@ export class Parser {
 
   private unaryOp(): Either<UnaryOpNode, QuaesitumError> {
     this.enter();
+    const current = this.peek();
     const op = this.expectTypeIs(
       "Expected a unary operator",
       TokenType.SPECIAL_TOKEN_UNARY_OP
@@ -1366,9 +1380,9 @@ export class Parser {
 
     return ok({
       type: ASTNodeType.UNARY_OP,
-      column: this.peek().column,
-      lineno: this.peek().lineno,
-      file: this.peek().file ?? "<unknown>",
+      column: current.column,
+      lineno: current.lineno,
+      file: current.file ?? "<unknown>",
       operator: op.value,
       operand: operand.value,
     });
@@ -1420,7 +1434,9 @@ export class Parser {
     const current = this.peek();
     const expect = this.expectTypeIs(
       "Expected a variable",
-      TokenType.SPECIAL_TOKEN_VARIABLE
+      TokenType.SPECIAL_TOKEN_VARIABLE,
+      TokenType.SPECIAL_TOKEN_BINARY_OP,
+      TokenType.SPECIAL_TOKEN_UNARY_OP
     ) as Either<VariableToken, QuaesitumError>;
 
     if (expect.isErr()) {
@@ -1441,7 +1457,7 @@ export class Parser {
     ast: Either<T, QuaesitumError>,
     parent: ASTNode | null = null,
     nth: number = 0
-  ): Either<T, QuaesitumError> {
+  ): Either<ASTNode, QuaesitumError> {
     if (ast.isErr()) {
       return ast;
     }
@@ -1459,6 +1475,8 @@ export class Parser {
         return ast;
       }
       case ASTNodeType.SENTENCE_LIST: {
+        const empties: number[] = [];
+
         for (let i = 0; i < val.sentences.length; i++) {
           const sentence = val.sentences[i];
           const s = this.verifyAST(ok(sentence), val, i);
@@ -1466,7 +1484,15 @@ export class Parser {
           if (s.isErr()) {
             return s;
           }
+
+          if (s.value.type === ASTNodeType.EMPTY) {
+            empties.push(i);
+          }
+
+          val.sentences[i] = s.value as SentenceNode;
         }
+
+        empties.reverse().forEach((i) => val.sentences.splice(i, 1));
 
         return ast;
       }
@@ -1483,7 +1509,16 @@ export class Parser {
           return b;
         }
 
-        return ast;
+        return ok({
+          type: ASTNodeType.IF,
+          body: b.value,
+          column: val.column,
+          composed: true,
+          condition: c.value,
+          file: val.file,
+          elif: [],
+          lineno: val.lineno,
+        } as ComposedIfNode);
       }
       case ASTNodeType.ELSE: {
         if (parent?.type !== ASTNodeType.SENTENCE_LIST) {
@@ -1497,31 +1532,61 @@ export class Parser {
           });
         }
 
-        const prevNode = parent.sentences[nth - 1];
+        let prevNode: SentenceNode;
+        let i = 1;
+
+        while (
+          ((prevNode = parent.sentences[nth - i])?.type as any) ===
+          ASTNodeType.EMPTY
+        ) {
+          i++;
+
+          if (i > nth) {
+            return err({
+              column: val.column,
+              lineno: val.lineno,
+              file: val.file,
+              message: "no preceding si node found",
+              type: "InternalError",
+            });
+          }
+        }
+
         const prev = prevNode?.type;
 
         if (prev !== ASTNodeType.IF) {
-          if (prev !== ASTNodeType.ELSE) {
-            return err({
-              column: val.column,
-              lineno: val.lineno,
-              file: val.file,
-              message:
-                "'aliter' statement must be placed after 'si' or 'aliter' statement.",
-              type: "SyntaxError",
-            });
-          }
+          return err({
+            column: val.column,
+            lineno: val.lineno,
+            file: val.file,
+            message:
+              "'aliter' statement must be placed after 'si' or 'aliter' statement",
+            type: "SyntaxError",
+          });
+        }
 
-          if (prevNode.body.type === ASTNodeType.SENTENCE_LIST) {
-            return err({
-              column: val.column,
-              lineno: val.lineno,
-              file: val.file,
-              message:
-                "cannot place 'aliter' statement after unconditioned 'aliter'",
-              type: "SyntaxError",
-            });
-          }
+        if (!isComposedIfNode(prevNode)) {
+          return err({
+            column: val.column,
+            lineno: val.lineno,
+            file: val.file,
+            message: "Internal error: preceding si node is not composed",
+            type: "InternalError",
+          });
+        }
+
+        if (
+          prevNode.elif.length > 0 &&
+          prevNode.elif[prevNode.elif.length - 1].body.type !== ASTNodeType.IF
+        ) {
+          return err({
+            column: val.column,
+            lineno: val.lineno,
+            file: val.file,
+            message:
+              "cannot place 'aliter' statement after unconditioned 'aliter'",
+            type: "SyntaxError",
+          });
         }
 
         const b = this.verifyAST(ok(val.body), val, 0);
@@ -1530,7 +1595,14 @@ export class Parser {
           return b;
         }
 
-        return ast;
+        prevNode.elif.push(val);
+
+        return ok({
+          type: ASTNodeType.EMPTY,
+          column: val.column,
+          lineno: val.lineno,
+          file: val.file,
+        } as EmptyNode);
       }
       case ASTNodeType.FOR:
       case ASTNodeType.WHILE:
@@ -1558,6 +1630,9 @@ export class Parser {
       return err;
     }
 
-    return this.verifyAST(this.program());
+    return this.verifyAST(this.program()) as Either<
+      ProgramNode,
+      QuaesitumError
+    >;
   }
 }

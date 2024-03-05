@@ -41,3 +41,27 @@ export interface VariableNode extends ExpressionNode {
   type: ASTNodeType.VARIABLE;
   identifier: VariableToken;
 }
+
+export function isBinaryOpNode(node: ExpressionNode): node is BinaryOpNode {
+  return node.type === ASTNodeType.BINARY_OP;
+}
+
+export function isUnaryOpNode(node: ExpressionNode): node is UnaryOpNode {
+  return node.type === ASTNodeType.UNARY_OP;
+}
+
+export function isNumericLiteralNode(
+  node: ExpressionNode
+): node is NumericLiteralNode {
+  return node.type === ASTNodeType.NUMERIC_LITERAL;
+}
+
+export function isStringLiteralNode(
+  node: ExpressionNode
+): node is StringLiteralNode {
+  return node.type === ASTNodeType.STRING_LITERAL;
+}
+
+export function isVariableNode(node: ExpressionNode): node is VariableNode {
+  return node.type === ASTNodeType.VARIABLE;
+}

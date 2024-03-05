@@ -1,15 +1,18 @@
-export function minus(a: number): number {
-  return -a;
+import { Ok, ok } from "../../util/either";
+
+export function minus(a: number): Ok<number> {
+  return ok(-a);
 }
 
-export function non(a: number): number {
-  return a === 0 ? 1 : 0;
+export function non(a: number): Ok<number> {
+  return ok(a === 0 ? 1 : 0);
 }
 
-export function plus(a: number): number {
-  return a;
+export function plus(a: number): Ok<number> {
+  return ok(a);
 }
 
-export function scribe(a: any): void {
+export function scribe(a: any): Ok<null> {
   console.log(a);
+  return ok(null);
 }

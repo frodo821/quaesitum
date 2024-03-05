@@ -24,6 +24,8 @@ export enum ASTNodeType {
   NUMERIC_LITERAL = "NUMERICAL_LITERAL",
   STRING_LITERAL = "STRING_LITERAL",
   VARIABLE = "VARIABLE",
+
+  EMPTY = "EMPTY",
 }
 
 export interface ASTNodeBase {
@@ -31,4 +33,8 @@ export interface ASTNodeBase {
   column: number;
   lineno: number;
   file: string;
+}
+
+export interface EmptyNode extends ASTNodeBase {
+  type: ASTNodeType.EMPTY;
 }

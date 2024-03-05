@@ -1,17 +1,17 @@
-define fibonacci cum num face
-  si num infra 2 tum
+define fibonacci cum n face
+  si n infra 2 tum
     redi 1.
-  hoc finis est.
+  huc finis est.
 
   crea variabilis a.
   crea variabilis b.
 
-  da a num subtrahe 1.
+  da a n subtrahe 1.
   da a fibonacci a.
-  da b num subtrahe 2.
+  da b n subtrahe 2.
   da b fibonacci b.
 
   redi a adde b.
-hoc finis est.
+huc finis est.
 
-scribe fibonacci 0.
+scribe fibonacci 4.
