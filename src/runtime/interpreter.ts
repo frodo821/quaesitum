@@ -12,6 +12,7 @@ import { QuaesitumError } from "../errors";
 import { SpecialToken, TokenType } from "../lexer";
 import { Either, err, ok } from "../util/either";
 import { binaryOps, unaryOps, constants } from "./builtins";
+import { Thesaurus } from "./internal/utils";
 
 export type Environment = {
   vars: Record<string, any>;
@@ -54,12 +55,35 @@ function lookup(
   env: Environment,
   type: "vars" | "binaryOp" | "unaryOp"
 ): Either<any, string> {
+  if (type === "vars") {
+    if (name === "variabilia") {
+      return ok(
+        Thesaurus.create({
+          vars: Thesaurus.create(env.vars),
+          binaryOp: Thesaurus.create(env.binaryOp),
+          unaryOp: Thesaurus.create(env.unaryOp),
+        })
+      );
+    }
+    if (name === "intrinseca") {
+      return ok(
+        Thesaurus.create({
+          vars: Thesaurus.create(constants),
+          binaryOp: Thesaurus.create(binaryOps),
+          unaryOp: Thesaurus.create(unaryOps),
+        })
+      );
+    }
+  }
+
   if (name in env[type]) {
     return ok(env[type][name]);
   }
+
   if (typeof env.parent !== "undefined") {
     return lookup(name, env.parent, type);
   }
+
   return err(`Undefined ${NameTypes[type]}: '${name}'`);
 }
 
@@ -68,6 +92,10 @@ function setVar<T>(
   env: Environment,
   value: T
 ): Either<T, string> {
+  if (name in constants) {
+    return ok(value);
+  }
+
   if (name in env.vars) {
     env.vars[name] = value;
     return ok(value);
@@ -361,6 +389,16 @@ function visit(
     }
     case ASTNodeType.VARIABLE_DECLARATION: {
       const identifier = node.identifier.identifier.value;
+      if (identifier in constants) {
+        return err({
+          message: `Cannot redeclare built-in variable: '${identifier}'`,
+          lineno: node.lineno,
+          column: node.column,
+          file: node.file,
+          type: "SyntaxError",
+        });
+      }
+
       env.vars[identifier] = undefined;
 
       return ok(null);
