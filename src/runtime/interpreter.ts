@@ -175,9 +175,6 @@ function visit(
   env: Environment,
   state: State
 ): Either<any, QuaesitumError> {
-  // console.log(
-  //   `${node.type} at line ${node.lineno} column ${node.column} in ${node.file}`
-  // );
   switch (node.type) {
     case ASTNodeType.PROGRAM:
       return visit(node.program, env, state);
@@ -474,6 +471,15 @@ function visit(
 
       return ok(result.unwrap());
     }
+
+    case ASTNodeType.IMPORT:
+      return err({
+        message: "import statement is not yet implemented",
+        lineno: node.lineno,
+        column: node.column,
+        file: node.file,
+        type: "SyntaxError",
+      });
   }
 }
 

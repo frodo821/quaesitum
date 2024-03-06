@@ -1,3 +1,6 @@
+import { QuaesitumSyntaxError } from "./parse/parser";
+import { Either, err, ok } from "./util/either";
+
 export enum TokenType {
   CREATE = "CREA",
   VARIABLE = "VARIABILIS",
@@ -22,6 +25,7 @@ export enum TokenType {
   NOTE = "NOTA",
   WITH = "CUM",
   AND = "ET",
+  IMPORT = "IMPORT",
   UNKNOWN = "UNKNOWN",
   SPECIAL_TOKEN_VARIABLE = "SPEC_VARIABLE",
   SPECIAL_TOKEN_UNARY_OP = "SPEC_UNARY_OP",
@@ -59,29 +63,30 @@ export type SpecialToken = VariableToken | UnaryOpToken | BinaryOpToken;
 
 export class Lexer {
   private readonly tokenPatterns: [TokenType, RegExp][] = [
-    [TokenType.CREATE, /^\bcrea\b/],
-    [TokenType.VARIABLE, /^\bvariabile\b/],
-    [TokenType.ASSIGN, /^\bda\b/],
-    [TokenType.DEFINE, /^\bdefine\b/],
-    [TokenType.RETURN, /^\bredi\b/],
-    [TokenType.IF, /^\bsi\b/],
-    [TokenType.ELSE, /^\baliter\b/],
-    [TokenType.THEN, /^\btum\b/],
-    [TokenType.FOR, /^\bper\b/],
-    [TokenType.WHILE, /^\bdum\b/],
-    [TokenType.DO, /^\bface\b/],
-    [TokenType.NEW, /^\bforma\b/],
-    [TokenType.FROM, /^\bab\b/],
-    [TokenType.TO, /^\bad\b/],
-    [TokenType.INHERIT, /^\bhereditat\b/],
-    [TokenType.END_OF_BLOCK, /^\bhuc finis est(?:\.|,)/],
+    [TokenType.CREATE, /^crea\b/],
+    [TokenType.VARIABLE, /^variabile\b/],
+    [TokenType.ASSIGN, /^da\b/],
+    [TokenType.DEFINE, /^define\b/],
+    [TokenType.RETURN, /^redi\b/],
+    [TokenType.IF, /^si\b/],
+    [TokenType.ELSE, /^aliter\b/],
+    [TokenType.THEN, /^tum\b/],
+    [TokenType.FOR, /^per\b/],
+    [TokenType.WHILE, /^dum\b/],
+    [TokenType.DO, /^face\b/],
+    [TokenType.NEW, /^forma\b/],
+    [TokenType.FROM, /^ab\b/],
+    [TokenType.TO, /^ad\b/],
+    [TokenType.INHERIT, /^hereditat\b/],
+    [TokenType.END_OF_BLOCK, /^huc finis est(?:\.|,)/],
     [TokenType.NUMERIC_LITERAL, /^\d+/],
     [TokenType.STRING_LITERAL, /^"[^"]*"/],
     [TokenType.END_OF_SENTENCE, /^(?:\.|,)/],
     [TokenType.NOTE, /^nota\b/],
-    [TokenType.WITH, /^\bcum\b/],
-    [TokenType.AND, /^\bet\b/],
-    [TokenType.IDENTIFIER, /^\b[a-zA-Z_][a-zA-Z0-9_]*\b/],
+    [TokenType.WITH, /^cum\b/],
+    [TokenType.AND, /^et\b/],
+    [TokenType.IMPORT, /^profer\b/],
+    [TokenType.IDENTIFIER, /^[a-z_][a-z0-9_]*(?:\.[a-z_][a-z0-9]*)*\b/i],
     [TokenType.UNKNOWN, /^\S+?(?:\b|(?=[\s,.]))/], // Captures any unknown pattern
   ];
 
@@ -91,7 +96,7 @@ export class Lexer {
     return [lineno, lines[lines.length - 1].length + 1];
   }
 
-  tokenize(input: string, fileName: string = "<string>"): Token[] {
+  tokenize(input: string, fileName: string = "<string>"): Either<Token[], QuaesitumSyntaxError> {
     let tokens: Token[] = [];
     let match: RegExpExecArray | null;
     const initialInput = input;
@@ -127,12 +132,16 @@ export class Lexer {
       }
 
       if (!tokenMatched) {
-        throw new Error(
-          `Unknown character '${input[0]}' at line ${lineno}, column ${column} in ${fileName}`
-        );
+        return err({
+          column,
+          lineno,
+          file: fileName,
+          message: `unknown character '${input[0]}'`,
+          type: "SyntaxError",
+        });
       }
     }
 
-    return tokens;
+    return ok(tokens);
   }
 }

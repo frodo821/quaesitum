@@ -13,3 +13,5 @@ per numerus ab 1 ad 100 face
     scribe numerus.
   huc finis est.
 huc finis est.
+
+profer fib ab "./fibonacci.qm".

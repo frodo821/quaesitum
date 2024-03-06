@@ -24,6 +24,7 @@ import {
   ComposedIfNode,
   FunctionNode,
   ImperativeNode,
+  ImportNode,
   ReturnNode,
   isComposedIfNode,
 } from "../ast/sentence";
@@ -34,10 +35,13 @@ import {
   UnaryOpToken,
   BinaryOpToken,
   SpecialToken,
+  Lexer,
 } from "../lexer";
 import { builtInNames } from "../runtime/builtins";
 import { Either, ok, err, Err } from "../util/either";
-import { QuaesitumError } from "../errors";
+import { ErrorGroup, QuaesitumError } from "../errors";
+import { readFileSync } from "fs";
+import { dirname, resolve } from "path";
 
 type CodeBlockItem<T = CodeBlockStructure> =
   | {
@@ -91,15 +95,23 @@ export class Parser {
   private tokens: Token[] = [];
   private prevScanIndices: number[] = [];
   private current: number = 0;
+  private file: string = "";
+  private static subParsers: Record<string, Parser> = {};
+  private static nameCache: Record<string, CodeBlock> = {};
 
-  constructor() {
-    this.initialize();
+  constructor(isSubParser: boolean = false) {
+    this.initialize(isSubParser);
   }
 
-  initialize() {
+  private initialize(isSubParser: boolean = false) {
     this.tokens = [];
     this.prevScanIndices = [];
     this.current = 0;
+
+    if (!isSubParser) {
+      Parser.nameCache = Object.create(null);
+      Parser.subParsers = Object.create(null);
+    }
   }
 
   move(n: number = 1) {
@@ -293,6 +305,54 @@ export class Parser {
     return structure;
   }
 
+  private scanNamesForExternalFile(
+    file: string,
+    current: Token
+  ): Either<Omit<CodeBlock, "children">, QuaesitumError> {
+    if (file in Parser.nameCache) {
+      return ok(Parser.nameCache[file]);
+    }
+
+    const parser = new Parser(true);
+    Parser.subParsers[file] = parser;
+
+    let src: string;
+    try {
+      src = readFileSync(file, "utf-8");
+    } catch (e) {
+      return this.composeError(
+        `could not read file '${file}': ${e}`,
+        current,
+        "ImportError"
+      );
+    }
+    const lexer = new Lexer();
+    const tokens = lexer.tokenize(src, file);
+
+    if (tokens.isErr()) {
+      return tokens;
+    }
+
+    parser.tokens = tokens.value;
+    parser.file = file;
+
+    const ret = parser.analyzeIdentifiers();
+
+    if (ret.isErr()) {
+      return ret;
+    }
+
+    if (file in Parser.nameCache) {
+      return ok(Parser.nameCache[file]);
+    }
+
+    return this.composeError(
+      `failed to look up names in file '${file}'`,
+      current,
+      "InternalError"
+    );
+  }
+
   private scanNames(): Either<CodeBlock, QuaesitumError> {
     const blocks = this.scanCodeBlock(0, 0, !1);
     const root: CodeBlock = {
@@ -336,6 +396,16 @@ export class Parser {
         ])
       ),
     };
+
+    if (blocks.children.length === 0) {
+      return ok(root);
+    }
+
+    if (this.file in Parser.nameCache) {
+      return ok(Parser.nameCache[this.file]);
+    }
+
+    const file = this.tokens[0].file ?? "<unknown>";
 
     let currentBlock = [blocks];
     let currentIndexInBlock = [0];
@@ -411,6 +481,10 @@ export class Parser {
             currentIndexInBlock[0]++;
             currentCodeBlock[0].variables[next.value.value] = next.value;
 
+            if (next.value.value.includes(".")) {
+              this.composeError(`Expected a non-qualified identifier`, token);
+            }
+
             next = currentBlock[0].children[currentIndexInBlock[0]];
             if (
               next?.type !== "token" ||
@@ -435,6 +509,14 @@ export class Parser {
             }
             const name = next.value.value;
             const nt = next.value;
+
+            if (name.includes(".")) {
+              return this.composeError(
+                "Expected a non-qualified identifier after 'define'",
+                token
+              );
+            }
+
             currentIndexInBlock[0]++;
             next = currentBlock[0].children[currentIndexInBlock[0]];
 
@@ -460,6 +542,14 @@ export class Parser {
 
             currentIndexInBlock[0]++;
             const arg1 = next.value;
+
+            if (arg1.value.includes(".")) {
+              return this.composeError(
+                "Expected a non-qualified identifier after 'cum'",
+                token
+              );
+            }
+
             next = currentBlock[0].children[currentIndexInBlock[0]];
 
             if (next?.type === "codeblock") {
@@ -497,6 +587,13 @@ export class Parser {
 
             const arg2 = next.value;
 
+            if (arg2.value.includes(".")) {
+              return this.composeError(
+                "Expected a non-qualified identifier after 'et'",
+                token
+              );
+            }
+
             currentIndexInBlock[0]++;
             next = currentBlock[0].children[currentIndexInBlock[0]];
 
@@ -524,11 +621,101 @@ export class Parser {
             currentBlock.unshift(next.value);
             break;
           }
+          case TokenType.IMPORT: {
+            let next = currentBlock[0].children[currentIndexInBlock[0]];
+
+            if (
+              next?.type !== "token" ||
+              next?.value.type !== TokenType.IDENTIFIER
+            ) {
+              return this.composeError(
+                "Expected an identifier after 'profer'",
+                token
+              );
+            }
+
+            const prefix = next.value.value;
+
+            currentCodeBlock[0].variables[prefix] = next.value;
+            currentIndexInBlock[0]++;
+
+            next = currentBlock[0].children[currentIndexInBlock[0]];
+
+            if (next?.type !== "token" || next?.value.type !== TokenType.FROM) {
+              return this.composeError("Expected 'ab'", token);
+            }
+
+            currentIndexInBlock[0]++;
+            next = currentBlock[0].children[currentIndexInBlock[0]];
+
+            if (
+              next?.type !== "token" ||
+              next?.value.type !== TokenType.STRING_LITERAL
+            ) {
+              return this.composeError(
+                "Expected a string literal after 'ab'",
+                token
+              );
+            }
+
+            const path = next.value.value
+              .substring(1, next.value.value.length - 1)
+              .trim();
+
+            currentIndexInBlock[0]++;
+            next = currentBlock[0].children[currentIndexInBlock[0]];
+
+            if (
+              next?.type !== "token" ||
+              next?.value.type !== TokenType.END_OF_SENTENCE
+            ) {
+              return this.composeError("Expected '.'", token);
+            }
+
+            currentIndexInBlock[0]++;
+
+            const names = this.scanNamesForExternalFile(
+              resolve(dirname(this.file ?? "."), path),
+              current.value
+            );
+
+            if (names.isErr()) {
+              return names;
+            }
+
+            for (const [name, value] of Object.entries(names.value.variables)) {
+              if (builtInNames.vars.includes(name)) {
+                continue;
+              }
+              currentCodeBlock[0].variables[`${prefix}.${name}`] = value;
+            }
+
+            for (const [name, value] of Object.entries(
+              names.value.unaryOperators
+            )) {
+              if (builtInNames.unaryOp.includes(name)) {
+                continue;
+              }
+              currentCodeBlock[0].unaryOperators[`${prefix}.${name}`] = value;
+            }
+
+            for (const [name, value] of Object.entries(
+              names.value.binaryOperators
+            )) {
+              if (builtInNames.binaryOp.includes(name)) {
+                continue;
+              }
+              currentCodeBlock[0].binaryOperators[`${prefix}.${name}`] = value;
+            }
+            break;
+          }
           default:
             break;
         }
       }
     }
+
+    Parser.nameCache[file] = root;
 
     return ok(root);
   }
@@ -768,6 +955,12 @@ export class Parser {
     }
 
     sen = this.comment();
+
+    if (sen.isOk()) {
+      return sen;
+    }
+
+    sen = this.import_();
 
     if (sen.isOk()) {
       return sen;
@@ -1271,6 +1464,57 @@ export class Parser {
     }
   }
 
+  private import_(): Either<ImportNode, QuaesitumError> {
+    const current = this.peek();
+    this.enter();
+
+    const import_ = this.expectTypeIs("Expected 'profer'", TokenType.IMPORT);
+
+    if (import_.isErr()) {
+      this.rollback();
+      return import_;
+    }
+
+    const identifier = this.identifier();
+
+    if (identifier.isErr()) {
+      this.rollback();
+      return identifier;
+    }
+
+    const from = this.expectTypeIs("Expected 'ab'", TokenType.FROM);
+
+    if (from.isErr()) {
+      this.rollback();
+      return from;
+    }
+
+    const path = this.stringLiteral();
+
+    if (path.isErr()) {
+      this.rollback();
+      return path;
+    }
+
+    const end = this.expectTypeIs("Expected '.'", TokenType.END_OF_SENTENCE);
+
+    if (end.isErr()) {
+      this.rollback();
+      return end;
+    }
+
+    this.commit();
+
+    return ok({
+      type: ASTNodeType.IMPORT,
+      column: current.column,
+      lineno: current.lineno,
+      file: current.file ?? "<unknown>",
+      identifier: identifier.value,
+      path: path.value.value,
+    });
+  }
+
   private expression(): Either<ExpressionNode, QuaesitumError> {
     let exp: Either<ExpressionNode, QuaesitumError> = this.binaryOp();
 
@@ -1621,18 +1865,56 @@ export class Parser {
     }
   }
 
-  feed(tokens: Token[]): Either<ProgramNode, QuaesitumError> {
+  feed(
+    tokens: Token[],
+    file?: string
+  ): Either<Record<string, ProgramNode>, QuaesitumError> {
     this.initialize();
     this.tokens = tokens;
-    const err = this.analyzeIdentifiers();
+    this.file = file ?? "<unknown>";
 
-    if (err.isErr()) {
-      return err;
+    const result = this.analyzeIdentifiers();
+
+    if (result.isErr()) {
+      return result;
     }
 
-    return this.verifyAST(this.program()) as Either<
-      ProgramNode,
-      QuaesitumError
-    >;
+    const asts = [[this.file, this] as [string, Parser]]
+      .concat(Object.entries(Parser.subParsers))
+      .map(([path, parser]) => {
+        const node = parser.verifyAST(parser.program()) as Either<
+          ProgramNode,
+          QuaesitumError
+        >;
+        if (node.isErr()) {
+          return [path, node] as const;
+        }
+        return [path, node] as const;
+      });
+
+    let errors: QuaesitumError[] = [];
+    let collectedASTs: Record<string, ProgramNode> = Object.create(null);
+
+    for (const [path, node] of asts) {
+      if (node.isOk()) {
+        collectedASTs[path] = node.value;
+        continue;
+      }
+
+      errors.push(node.error);
+    }
+
+    if (errors.length > 0) {
+      return err({
+        column: 1,
+        lineno: 1,
+        file: this.file,
+        message: "Failed to parse the program",
+        type: "ErrorGroup",
+        errors,
+      } as ErrorGroup);
+    }
+
+    return ok(collectedASTs);
   }
 }

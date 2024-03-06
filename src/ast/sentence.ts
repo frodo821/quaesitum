@@ -17,7 +17,8 @@ export type SentenceType =
   | ASTNodeType.WHILE
   | ASTNodeType.FUNCTION
   | ASTNodeType.RETURN
-  | ASTNodeType.COMMENT;
+  | ASTNodeType.COMMENT
+  | ASTNodeType.IMPORT;
 
 export interface IdentifierNode extends ASTNodeBase {
   type: ASTNodeType.IDENTIFIER;
@@ -97,6 +98,12 @@ export interface CommentNode extends ASTNodeBase {
   value: string;
 }
 
+export interface ImportNode extends ASTNodeBase {
+  type: ASTNodeType.IMPORT;
+  path: string;
+  identifier: IdentifierNode | null;
+}
+
 export type SentenceNode =
   | VariableDeclarationNode
   | AssignmentNode
@@ -107,4 +114,5 @@ export type SentenceNode =
   | WhileNode
   | FunctionNode
   | ReturnNode
-  | CommentNode;
+  | CommentNode
+  | ImportNode;
