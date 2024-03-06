@@ -83,6 +83,14 @@ export class Thesaurus {
     return Thesaurus.create(this.thesaurus);
   }
 
+  has(key: any): boolean {
+    if (typeof key !== "string" && typeof key !== "number") {
+      return false;
+    }
+
+    return key in this.thesaurus;
+  }
+
   get keys(): string[] {
     return Object.keys(this.thesaurus);
   }

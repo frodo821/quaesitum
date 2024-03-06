@@ -224,6 +224,9 @@ export function uneval(
     case ASTNodeType.IDENTIFIER: {
       return node.identifier.value;
     }
+    case ASTNodeType.IMPORT: {
+      return `profer ${node.identifier.identifier.value} ab "${node.path}".`;
+    }
     default:
       return "";
   }

@@ -1,30 +1,31 @@
-import { QuaesitumError } from "./errors";
+import { showError } from "./errors";
 import { Lexer } from "./lexer";
 import { Parser } from "./parse/parser";
 import { execute } from "./runtime/interpreter";
 import { readFileSync } from "fs";
+import { resolve } from "path";
 
-function showError(err: QuaesitumError) {
-  console.error(
-    `${err.type}: ${err.message} at line ${err.lineno}, column ${
-      err.column
-    } in ${err.file ?? "<anonymous>"}`
-  );
-}
-
-function execFile(path: string) {
+async function execFile(path: string) {
+  path = resolve(path);
   const src = readFileSync(path, "utf-8");
   const lexer = new Lexer();
   const tokens = lexer.tokenize(src, path);
+
+  if (tokens.isErr()) {
+    showError(tokens.unwrapErr());
+    return -3;
+  }
+
   const parser = new Parser();
-  const program = parser.feed(tokens);
+  const program = parser.feed(tokens.value, path);
 
   if (program.isErr()) {
     showError(program.unwrapErr());
     return -2;
   }
 
-  const result = execute(program.unwrap());
+  const asts = program.value;
+  const result = await execute(asts, path);
 
   if (result.isErr()) {
     showError(result.unwrapErr());
@@ -34,4 +35,4 @@ function execFile(path: string) {
   return 0;
 }
 
-process.exit(execFile(process.argv[2]));
+execFile(process.argv[2]).then((it) => process.exit(it));
