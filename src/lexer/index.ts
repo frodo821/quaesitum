@@ -1,5 +1,5 @@
-import { QuaesitumSyntaxError } from "./parse/parser";
-import { Either, err, ok } from "./util/either";
+import { QuaesitumSyntaxError } from "../parse/parser";
+import { Either, err, ok } from "../util/either";
 
 export enum TokenType {
   CREATE = "CREA",
@@ -96,7 +96,10 @@ export class Lexer {
     return [lineno, lines[lines.length - 1].length + 1];
   }
 
-  tokenize(input: string, fileName: string = "<string>"): Either<Token[], QuaesitumSyntaxError> {
+  tokenize(
+    input: string,
+    fileName: string = "<string>"
+  ): Either<Token[], QuaesitumSyntaxError> {
     let tokens: Token[] = [];
     let match: RegExpExecArray | null;
     const initialInput = input;
