@@ -4,13 +4,14 @@ crea variabile numerus.
 nota for each numbers from 1 to 100 (both inclusive),
 per numerus ab 1 ad 100 face
   si 0 aequat numerus modulo 15 tum
-    scribe "FizzBuzz".
+    scribe "FizzBuzz\n".
   huc finis est. aliter si 0 aequat numerus modulo 3 tum
-    scribe "Fizz".
+    scribe "Fizz\n".
   huc finis est. aliter si 0 aequat numerus modulo 5 tum
-    scribe "Buzz".
+    scribe "Buzz\n".
   huc finis est. aliter tum
     scribe numerus.
+    scribe "\n".
   huc finis est.
 huc finis est.
 

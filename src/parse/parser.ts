@@ -1653,6 +1653,62 @@ export class Parser {
     });
   }
 
+  private parseEscapeSequence(str: string): string {
+    const stripeQuotes = str.substring(1, str.length - 1);
+
+    return stripeQuotes.replace(
+      /\\([^xu]|x[0-9a-f]{2}|u[0-9a-f]{4,5})/gi,
+      (_, c) => {
+        if (typeof c !== "string") {
+          return "";
+        }
+        switch (c) {
+          case "n":
+            return "\n";
+          case "r":
+            return "\r";
+          case "t":
+            return "\t";
+          case "f":
+            return "\f";
+          case "v":
+            return "\v";
+          case "e":
+            return "\x1b";
+          case "a":
+            return "\x07";
+          case "0":
+            return "\0";
+          default: {
+            if (c.startsWith("x")) {
+              return String.fromCharCode(parseInt(c.substring(1), 16));
+            }
+            if (c.startsWith("u")) {
+              // 5 is the length of the unicode codepoint escape sequence
+              if (c.length === 5) {
+                return String.fromCharCode(parseInt(c.substring(1), 16));
+              }
+
+              // otherwise, it's a supplementary codepoint
+              const codepoint = parseInt(`1${c.substring(1)}`, 16);
+
+              const uuuuu = (codepoint >> 16) & 0b11111;
+              const x16 = codepoint & 0xffff;
+              const wwww = (uuuuu - 1) & 0xf;
+              const x6 = (x16 >> 10) & 0x3f;
+              const x10 = x16 & 0x3ff;
+              const upper = 0b1101100000000000 | (wwww << 6) | x6;
+              const lower = 0b1101110000000000 | x10;
+
+              return String.fromCharCode(upper, lower);
+            }
+            return c;
+          }
+        }
+      }
+    );
+  }
+
   private stringLiteral(): Either<StringLiteralNode, QuaesitumError> {
     const current = this.peek();
     const expect = this.expectTypeIs(
@@ -1670,7 +1726,7 @@ export class Parser {
       lineno: current.lineno,
       file: current.file ?? "<unknown>",
       representation: current,
-      value: current.value.substring(1, current.value.length - 1), // remove the quotes
+      value: this.parseEscapeSequence(current.value), // remove the quotes
     });
   }
 

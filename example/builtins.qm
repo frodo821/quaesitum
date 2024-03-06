@@ -1,22 +1,15 @@
-scribe "============= print all local variables =============
-".
+scribe "============= print all local variables =============\n\n".
 scribe variabilia.
-scribe "
-================ print all builtins =================
-".
+scribe "\n\n================ print all builtins =================\n\n".
 scribe intrinseca.
 
-scribe "
-================== create thesaurus =================
-".
+scribe "\n\n================== create thesaurus =================\n\n".
 crea variabile x.
 da x crea_thesaurum nullum.
 x pone "foo" compone 2.
 scribe x.
 
-scribe "
-================= get value thesaurus ===============
-".
+scribe "\n\n================= get value thesaurus ===============\n\n".
 crea variabile y.
 da y x para "foo".
 scribe y.

@@ -32,3 +32,4 @@ huc finis est.
 
 nota calulate 4th fibonacci number and print it.
 scribe fibonacci 100.
+scribe "\n".

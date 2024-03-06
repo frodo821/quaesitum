@@ -15,7 +15,7 @@ export function plus(a: number): Ok<number> {
 }
 
 export function scribe(a: any): Ok<null> {
-  console.log(`${a}`);
+  process.stdout.write(`${a}`);
   return ok(null);
 }
 
