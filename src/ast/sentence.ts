@@ -101,7 +101,7 @@ export interface CommentNode extends ASTNodeBase {
 export interface ImportNode extends ASTNodeBase {
   type: ASTNodeType.IMPORT;
   path: string;
-  identifier: IdentifierNode | null;
+  identifier: IdentifierNode;
 }
 
 export type SentenceNode =

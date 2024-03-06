@@ -1,8 +1,15 @@
 nota define fibonacci function takes an argument n.
+crea variabile memo.
+da memo crea_thesaurum nullum.
+
 define fibonacci cum n face
   nota if n is less than 2 return 1.
   si n infra 2 tum
     redi 1.
+  huc finis est.
+
+  si memo habetne n tum
+    redi memo para n.
   huc finis est.
 
   nota create intermediate variables a and b.
@@ -18,8 +25,10 @@ define fibonacci cum n face
   da b fibonacci b.
 
   nota return the sum of a and b.
-  redi a adde b.
+  da a a adde b.
+  memo pone n compone a.
+  redi a.
 huc finis est.
 
 nota calulate 4th fibonacci number and print it.
-scribe fibonacci 4.
+scribe fibonacci 100.

@@ -5,7 +5,7 @@ import { execute } from "./runtime/interpreter";
 import { readFileSync } from "fs";
 import { resolve } from "path";
 
-function execFile(path: string) {
+async function execFile(path: string) {
   path = resolve(path);
   const src = readFileSync(path, "utf-8");
   const lexer = new Lexer();
@@ -25,7 +25,7 @@ function execFile(path: string) {
   }
 
   const asts = program.value;
-  const result = execute(asts[path]);
+  const result = await execute(asts, path);
 
   if (result.isErr()) {
     showError(result.unwrapErr());
@@ -35,4 +35,4 @@ function execFile(path: string) {
   return 0;
 }
 
-process.exit(execFile(process.argv[2]));
+execFile(process.argv[2]).then((it) => process.exit(it));

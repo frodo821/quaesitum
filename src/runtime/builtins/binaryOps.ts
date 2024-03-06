@@ -170,6 +170,18 @@ export function dele(a: any, b: any): Either<any, QuaesitumError> {
   return a.del(b);
 }
 
+export function habetne(a: any, b: any): Either<boolean, QuaesitumError> {
+  if (a instanceof Thesaurus) {
+    return ok(a.has(b));
+  }
+
+  if (Array.isArray(a)) {
+    return ok(a.includes(b));
+  }
+
+  return ok(false);
+}
+
 setBuiltinOperatorProperties(adde, {
   arity: 2,
   description: "Adds two numbers or concatenates two strings",
@@ -349,5 +361,18 @@ setBuiltinOperatorProperties(dele, {
   param2: {
     name: "b",
     description: "The key or index",
+  },
+});
+
+setBuiltinOperatorProperties(habetne, {
+  arity: 2,
+  description: "Checks if an object or array has a key or value",
+  param1: {
+    name: "a",
+    description: "The object or array",
+  },
+  param2: {
+    name: "b",
+    description: "The key or value",
   },
 });
