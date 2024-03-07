@@ -16,3 +16,6 @@ per numerus ab 1 ad 100 face
 huc finis est.
 
 profer fib ab "./fibonacci.qm".
+
+scribe fib.fibonacci 100.
+scribe "\n".
