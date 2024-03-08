@@ -61,6 +61,29 @@ export interface BinaryOpToken extends Token {
 
 export type SpecialToken = VariableToken | UnaryOpToken | BinaryOpToken;
 
+export const Keywords = [
+  "crea",
+  "variabile",
+  "da",
+  "define",
+  "redi",
+  "si",
+  "aliter",
+  "tum",
+  "per",
+  "dum",
+  "face",
+  "forma",
+  "ab",
+  "ad",
+  "hereditat",
+  "huc finis est.",
+  "nota",
+  "cum",
+  "et",
+  "profer",
+] as const;
+
 export class Lexer {
   private readonly tokenPatterns: [TokenType, RegExp][] = [
     [TokenType.CREATE, /^crea\b/],

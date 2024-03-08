@@ -8,12 +8,14 @@ import {
   isVariableNode,
 } from "../ast/expressions";
 import { isComposedIfNode } from "../ast/sentence";
-import { QuaesitumError } from "../errors";
-import { SpecialToken, TokenType } from "../lexer";
+import { QuaesitumError, showError } from "../errors";
+import { Lexer, SpecialToken, TokenType } from "../lexer";
+import { Parser } from "../parse/parser";
 import { Either, Ok, err, ok } from "../util/either";
 import { binaryOps, unaryOps, constants } from "./builtins";
 import { Thesaurus } from "./internal/utils";
 import { dirname, resolve } from "path";
+import { readFileSync } from "fs";
 
 export type Environment = {
   vars: Record<string, any>;
@@ -171,13 +173,13 @@ type State = {
   toBreak?: boolean;
 };
 
-class Executor {
-  private moduleCache: Record<string, [Environment, Ok<any>]> = {};
-  constructor(private trees: Record<string, ProgramNode>) {
+export class Executor {
+  private moduleCache: Record<string, [Environment, Ok<any>]>;
+  constructor(public trees: Record<string, ProgramNode>) {
     this.moduleCache = {};
   }
 
-  private initGlobals() {
+  initGlobals() {
     const root = createEnvironment();
     root.binaryOp = binaryOps;
     root.unaryOp = unaryOps;
@@ -578,4 +580,34 @@ export async function execute(
   env?: Environment
 ): Promise<Either<any, QuaesitumError>> {
   return await new Executor(node).enter(entry, env);
+}
+
+export async function execFile(path: string) {
+  path = resolve(path);
+  const src = readFileSync(path, "utf-8");
+  const lexer = new Lexer();
+  const tokens = lexer.tokenize(src, path);
+
+  if (tokens.isErr()) {
+    showError(tokens.unwrapErr());
+    return -3;
+  }
+
+  const parser = new Parser();
+  const program = parser.feed(tokens.value, path);
+
+  if (program.isErr()) {
+    showError(program.unwrapErr());
+    return -2;
+  }
+
+  const asts = program.value;
+  const result = await execute(asts, path);
+
+  if (result.isErr()) {
+    showError(result.unwrapErr());
+    return -1;
+  }
+
+  return 0;
 }

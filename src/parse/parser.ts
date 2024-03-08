@@ -100,10 +100,10 @@ export class Parser {
   private static nameCache: Record<string, CodeBlock> = {};
 
   constructor(isSubParser: boolean = false) {
-    this.initialize(isSubParser);
+    this.reinitialize(isSubParser);
   }
 
-  private initialize(isSubParser: boolean = false) {
+  reinitialize(isSubParser: boolean = false) {
     this.tokens = [];
     this.prevScanIndices = [];
     this.current = 0;
@@ -720,7 +720,9 @@ export class Parser {
     return ok(root);
   }
 
-  private analyzeIdentifiers(): Either<null, QuaesitumError> {
+  private analyzeIdentifiers(
+    knownGlobals?: Omit<CodeBlock, "start" | "end" | "children">
+  ): Either<null, QuaesitumError> {
     const optNames = this.scanNames();
 
     if (optNames.isErr()) {
@@ -728,6 +730,19 @@ export class Parser {
     }
 
     const names = optNames.value;
+
+    if (knownGlobals) {
+      names.binaryOperators = {
+        ...knownGlobals.binaryOperators,
+        ...names.binaryOperators,
+      };
+      names.unaryOperators = {
+        ...knownGlobals.unaryOperators,
+        ...names.unaryOperators,
+      };
+      names.variables = { ...knownGlobals.variables, ...names.variables };
+    }
+
     let inComment = false;
 
     tokens: for (let i = 0; i < this.tokens.length; i++) {
@@ -1921,11 +1936,98 @@ export class Parser {
     }
   }
 
+  checkCompleted(tokens: Token[]): Either<boolean, QuaesitumError> {
+    let nesting = 0;
+
+    for (const token of tokens) {
+      if ([TokenType.DO, TokenType.THEN].includes(token.type)) {
+        nesting++;
+      } else if (token.type === TokenType.END_OF_BLOCK) {
+        nesting--;
+      }
+
+      if (nesting < 0) {
+        return err({
+          column: token.column,
+          lineno: token.lineno,
+          file: token.file ?? "<unknown>",
+          message: "unmatched end of block.",
+          type: "SyntaxError",
+        });
+      }
+    }
+
+    return ok(
+      nesting === 0 &&
+        [TokenType.END_OF_SENTENCE, TokenType.END_OF_BLOCK].includes(
+          tokens[tokens.length - 1]?.type
+        )
+    );
+  }
+
+  partialFeed(
+    tokens: Token[],
+    file?: string
+  ): Either<Record<string, ProgramNode>, QuaesitumError> {
+    this.file = file ?? "<unknown>";
+    const cached = Parser.nameCache[this.file] ?? {};
+    const loadedFiles = Object.keys(Parser.subParsers);
+    delete Parser.nameCache[this.file];
+
+    this.reinitialize(false);
+    this.tokens = tokens;
+
+    const result = this.analyzeIdentifiers(cached);
+
+    if (result.isErr()) {
+      return result;
+    }
+
+    const asts = [[this.file, this] as [string, Parser]]
+      .concat(Object.entries(Parser.subParsers))
+      .filter(([path]) => !loadedFiles.includes(path) || path === this.file)
+      .map(([path, parser]) => {
+        const node = parser.verifyAST(parser.program()) as Either<
+          ProgramNode,
+          QuaesitumError
+        >;
+        if (node.isErr()) {
+          return [path, node] as const;
+        }
+        return [path, node] as const;
+      });
+
+    let errors: QuaesitumError[] = [];
+    let collectedASTs: Record<string, ProgramNode> = Object.create(null);
+
+    for (const [path, node] of asts) {
+      if (node.isOk()) {
+        collectedASTs[path] = node.value;
+        continue;
+      }
+
+      errors.push(node.error);
+    }
+
+    if (errors.length > 0) {
+      return err({
+        column: 1,
+        lineno: 1,
+        file: this.file,
+        message: "Failed to parse the program",
+        type: "ErrorGroup",
+        errors,
+      } as ErrorGroup);
+    }
+
+    return ok(collectedASTs);
+  }
+
   feed(
     tokens: Token[],
     file?: string
   ): Either<Record<string, ProgramNode>, QuaesitumError> {
-    this.initialize();
+    this.reinitialize();
     this.tokens = tokens;
     this.file = file ?? "<unknown>";
 
