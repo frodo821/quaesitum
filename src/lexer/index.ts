@@ -102,7 +102,7 @@ export class Lexer {
     [TokenType.TO, /^ad\b/],
     [TokenType.INHERIT, /^hereditat\b/],
     [TokenType.END_OF_BLOCK, /^huc finis est(?:\.|,)/],
-    [TokenType.NUMERIC_LITERAL, /^\d+/],
+    [TokenType.NUMERIC_LITERAL, /^[\d_]+(?:\.[\d_]+)?(?:[eE][+-]?\d+)?|^\.\d+/],
     [TokenType.STRING_LITERAL, /^"[^"]*"/],
     [TokenType.END_OF_SENTENCE, /^(?:\.|,)/],
     [TokenType.NOTE, /^nota\b/],
