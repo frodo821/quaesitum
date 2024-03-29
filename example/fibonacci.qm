@@ -30,6 +30,6 @@ define fibonacci cum n face
   redi a.
 huc finis est.
 
-nota calulate 4th fibonacci number and print it.
-scribe fibonacci 100.
+nota calulate 1000th fibonacci number and print it.
+scribe fibonacci 1000.
 scribe "\n".
